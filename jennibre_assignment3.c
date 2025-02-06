@@ -92,10 +92,9 @@ char* find_largest_or_smallest_file(int find_largest) {
     long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.') continue;
         if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
-                if ((find_largest && file_stat.st_size > selected_size) ||
+                if ((find_largest && file_stat.st_size > selected_size) || 
                     (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
                     free(selected_file);
@@ -156,6 +155,7 @@ void create_directory_and_process_data(const char *filename) {
 
     char line[512];
     int header_skipped = 0;
+    int processed_years[3000] = {0};  // To track processed years
 
     while (fgets(line, sizeof(line), file)) {
         if (!header_skipped) {
@@ -165,17 +165,33 @@ void create_directory_and_process_data(const char *filename) {
 
         char title[MAX_TITLE_LENGTH];
         int year;
-        if (sscanf(line, "%255[^,],%d", title, &year) == 2) {
-            char year_filename[512];
-            snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+        if (sscanf(line, "%255[^,],%d", title, &year) == 2 && year > 1800 && year < 3000) {
+            if (!processed_years[year]) {  // Only create the file if it hasn't been created yet
+                processed_years[year] = 1;
 
-            FILE *year_file = fopen(year_filename, "a");
-            if (year_file) {
-                fprintf(year_file, "%s\n", title);
-                fclose(year_file);
-                chmod(year_filename, 0640);
+                char year_filename[512];
+                snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+
+                FILE *year_file = fopen(year_filename, "w");
+                if (year_file) {
+                    fprintf(year_file, "%s\n", title);
+                    fclose(year_file);
+                    chmod(year_filename, 0640);  // Set file permissions
+                } else {
+                    perror("Error creating file");
+                }
             } else {
-                perror("Error creating file");
+                // Append if the file already exists
+                char year_filename[512];
+                snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+
+                FILE *year_file = fopen(year_filename, "a");
+                if (year_file) {
+                    fprintf(year_file, "%s\n", title);
+                    fclose(year_file);
+                } else {
+                    perror("Error appending to file");
+                }
             }
         }
     }
@@ -184,9 +200,16 @@ void create_directory_and_process_data(const char *filename) {
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
-    return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
-            len > strlen(EXTENSION) &&
-            strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
+
+    if (strncmp(filename, PREFIX, strlen(PREFIX)) != 0) {
+        return 0;
+    }
+
+    if (len < strlen(EXTENSION) || strcmp(filename + len - strlen(EXTENSION), EXTENSION) != 0) {
+        return 0;
+    }
+
+    return 1;
 }
 
 void clear_input_buffer() {
