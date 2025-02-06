@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <limits.h>
+#include <ctype.h>
 
 #define PREFIX "movies_"
 #define EXTENSION ".csv"
@@ -22,6 +23,8 @@ void create_directory_and_process_data(const char *filename);
 int is_movies_file(const char *filename);
 void clear_input_buffer();
 void set_file_permissions(const char *file_path, mode_t mode);
+char* trim_whitespace(char *str);
+int is_valid_year(int year);
 
 int main() {
     int choice;
@@ -169,17 +172,23 @@ void create_directory_and_process_data(const char *filename) {
         }
 
         char title[MAX_TITLE_LENGTH];
+        char year_str[16];
         int year;
 
         // Use strtok to handle cases where the title contains commas
         char *token = strtok(line, ",");
         if (token) {
-            strncpy(title, token, MAX_TITLE_LENGTH - 1);
+            strncpy(title, trim_whitespace(token), MAX_TITLE_LENGTH - 1);
             title[MAX_TITLE_LENGTH - 1] = '\0';
 
             token = strtok(NULL, ",");
             if (token) {
-                year = atoi(token);
+                strncpy(year_str, trim_whitespace(token), sizeof(year_str) - 1);
+                year_str[sizeof(year_str) - 1] = '\0';
+                year = atoi(year_str);
+
+                // Validate year
+                if (!is_valid_year(year)) continue;
 
                 char year_filename[512];
                 snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
@@ -217,4 +226,26 @@ void set_file_permissions(const char *file_path, mode_t mode) {
     if (chmod(file_path, mode) != 0) {
         perror("Error setting file permissions");
     }
+}
+
+char* trim_whitespace(char *str) {
+    char *end;
+
+    // Trim leading space
+    while (isspace((unsigned char)*str)) str++;
+
+    if (*str == 0) return str;  // All spaces
+
+    // Trim trailing space
+    end = str + strlen(str) - 1;
+    while (end > str && isspace((unsigned char)*end)) end--;
+
+    // Write new null terminator
+    *(end + 1) = 0;
+
+    return str;
+}
+
+int is_valid_year(int year) {
+    return (year >= 1900 && year <= 2025);  // Only allow realistic movie years
 }
