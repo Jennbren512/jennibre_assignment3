@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
+#include <limits.h>  // Added for LONG_MAX
 
 #define PREFIX "movies_"
 #define EXTENSION ".csv"
@@ -69,7 +70,7 @@ void display_main_menu() {
 }
 
 void display_file_selection_menu() {
-    printf("\nWhich file you want to process?\n");
+    printf("\nWhich file do you want to process?\n");
     printf("Enter 1 to pick the largest file\n");
     printf("Enter 2 to pick the smallest file\n");
     printf("Enter 3 to specify the name of a file\n");
@@ -85,15 +86,15 @@ char* find_largest_or_smallest_file(int find_largest) {
     struct dirent *entry;
     struct stat file_stat;
     char *selected_file = NULL;
-    long selected_size = find_largest ? 0 : -1;
+    long selected_size = find_largest ? 0 : LONG_MAX;  // Corrected initialization
+
     while ((entry = readdir(dir)) != NULL) {
         if (is_movies_file(entry->d_name)) {
-            printf("Found file: %s\n", entry->d_name);
             if (stat(entry->d_name, &file_stat) == 0) {
                 if ((find_largest && file_stat.st_size > selected_size) || 
-                    (!find_largest && (selected_size == -1 || file_stat.st_size < selected_size))) {
+                    (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
-                    free(selected_file);
+                    free(selected_file);  // Free previous allocation
                     selected_file = strdup(entry->d_name);
                 }
             }
@@ -144,7 +145,7 @@ void create_directory_and_process_data(const char *filename) {
         // Create and write some dummy data into each file
         FILE *file = fopen(filename, "w");
         if (file) {
-            fprintf(file, "Dummy data for year %d", year); // You can replace this with real data if necessary
+            fprintf(file, "Dummy data for year %d", year); // Replace with real data if needed
             fclose(file);
             printf("Created file: %s\n", filename);
         } else {
@@ -152,7 +153,6 @@ void create_directory_and_process_data(const char *filename) {
         }
     }
 }
-
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
