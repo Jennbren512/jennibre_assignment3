@@ -41,7 +41,7 @@ int main() {
                     selected_file = find_largest_or_smallest_file(0);
                 } else if (file_choice == 3) {
                     selected_file = get_user_file(&valid);
-                    if (!valid) continue;  // Re-display menu on invalid file
+                    if (!valid) continue;
                 } else {
                     printf("You entered an incorrect choice. Try again.\n");
                     continue;
@@ -88,7 +88,7 @@ char* find_largest_or_smallest_file(int find_largest) {
     long selected_size = find_largest ? 0 : -1;
     while ((entry = readdir(dir)) != NULL) {
         if (is_movies_file(entry->d_name)) {
-            printf("Found file: %s\n", entry->d_name); // Debugging line to see files
+            printf("Found file: %s\n", entry->d_name);
             if (stat(entry->d_name, &file_stat) == 0) {
                 if ((find_largest && file_stat.st_size > selected_size) || 
                     (!find_largest && (selected_size == -1 || file_stat.st_size < selected_size))) {
@@ -126,14 +126,33 @@ void create_directory_and_process_data(const char *filename) {
     char directory_name[256];
     srand(time(NULL));
     int random_number = rand() % 100000;
-    sprintf(directory_name, "%s.movies.%d", ONID, random_number);
+    snprintf(directory_name, sizeof(directory_name), "%s.movies.%d", ONID, random_number);
+
+    // Create the directory
     if (mkdir(directory_name, 0750) == 0) {
         printf("Created directory with name %s\n", directory_name);
     } else {
         perror("Error creating directory");
         return;
     }
+
+    // Increase the buffer size for filenames to accommodate the full path
+    for (int year = 2000; year <= 2018; ++year) {
+        char filename[512]; // Increased buffer size to ensure space for full file path
+        snprintf(filename, sizeof(filename), "%s/%d.txt", directory_name, year);  // Using snprintf
+
+        // Create and write some dummy data into each file
+        FILE *file = fopen(filename, "w");
+        if (file) {
+            fprintf(file, "Dummy data for year %d", year); // You can replace this with real data if necessary
+            fclose(file);
+            printf("Created file: %s\n", filename);
+        } else {
+            perror("Error creating file");
+        }
+    }
 }
+
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
