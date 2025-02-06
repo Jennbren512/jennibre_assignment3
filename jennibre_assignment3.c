@@ -25,6 +25,7 @@ int is_movies_file(const char *filename);
 void clear_input_buffer();
 void set_file_permissions(const char *file_path, mode_t mode);
 int is_year_processed(int year, int *years_processed);
+void debug_print_movies(const char *filename);
 
 int main() {
     int choice;
@@ -177,6 +178,8 @@ void create_directory_and_process_data(const char *filename) {
         char title[MAX_TITLE_LENGTH];
         int year;
         if (sscanf(line, "%255[^,],%d", title, &year) == 2) {  
+            printf("Processing movie: '%s' in year %d\n", title, year);  // Debug print
+
             if (year >= MIN_YEAR && year <= MAX_YEAR) {
                 if (!is_year_processed(year, years_processed)) {
                     years_processed[year - MIN_YEAR] = 1;  // Mark year as processed
