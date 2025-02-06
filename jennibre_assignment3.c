@@ -21,6 +21,7 @@ void process_file(const char *filename);
 void create_directory_and_process_data(const char *filename);
 int is_movies_file(const char *filename);
 void clear_input_buffer();
+void set_file_permissions(const char *file_path, mode_t mode);
 
 int main() {
     int choice;
@@ -148,6 +149,9 @@ void create_directory_and_process_data(const char *filename) {
         return;
     }
 
+    // Explicitly set directory permissions to 0755 (just to be sure)
+    set_file_permissions(directory_name, 0755);
+
     // Open CSV file
     FILE *file = fopen(filename, "r");
     if (!file) {
@@ -175,6 +179,9 @@ void create_directory_and_process_data(const char *filename) {
             if (year_file) {
                 fprintf(year_file, "%s\n", title);
                 fclose(year_file);
+                
+                // Set file permissions to 0644 (explicitly)
+                set_file_permissions(year_filename, 0644);
             } else {
                 perror("Error creating file");
             }
@@ -200,4 +207,10 @@ int is_movies_file(const char *filename) {
 void clear_input_buffer() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
+}
+
+void set_file_permissions(const char *file_path, mode_t mode) {
+    if (chmod(file_path, mode) != 0) {
+        perror("Error setting file permissions");
+    }
 }
