@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
-#include <limits.h>  // Added for LONG_MAX
+#include <limits.h>
 
 #define PREFIX "movies_"
 #define EXTENSION ".csv"
@@ -47,6 +47,7 @@ int main() {
                     printf("You entered an incorrect choice. Try again.\n");
                     continue;
                 }
+
                 if (selected_file) {
                     printf("Now processing the chosen file named %s\n", selected_file);
                     process_file(selected_file);
@@ -70,7 +71,7 @@ void display_main_menu() {
 }
 
 void display_file_selection_menu() {
-    printf("\nWhich file do you want to process?\n");
+    printf("\nWhich file you want to process?\n");
     printf("Enter 1 to pick the largest file\n");
     printf("Enter 2 to pick the smallest file\n");
     printf("Enter 3 to specify the name of a file\n");
@@ -83,13 +84,14 @@ char* find_largest_or_smallest_file(int find_largest) {
         perror("Unable to open directory");
         return NULL;
     }
+
     struct dirent *entry;
     struct stat file_stat;
     char *selected_file = NULL;
-    long selected_size = find_largest ? 0 : LONG_MAX;  // Corrected initialization
+    long selected_size = find_largest ? 0 : LONG_MAX;  // Ensure correct initialization
 
     while ((entry = readdir(dir)) != NULL) {
-        if (is_movies_file(entry->d_name)) {
+        if (is_movies_file(entry->d_name)) {  
             if (stat(entry->d_name, &file_stat) == 0) {
                 if ((find_largest && file_stat.st_size > selected_size) || 
                     (!find_largest && file_stat.st_size < selected_size)) {
@@ -97,10 +99,17 @@ char* find_largest_or_smallest_file(int find_largest) {
                     free(selected_file);  // Free previous allocation
                     selected_file = strdup(entry->d_name);
                 }
+            } else {
+                perror("Error getting file stats");
             }
         }
     }
     closedir(dir);
+
+    if (!selected_file) {
+        printf("No valid movies_*.csv files found.\n");
+    }
+
     return selected_file;
 }
 
@@ -109,6 +118,7 @@ char* get_user_file(int *valid) {
     printf("Enter the complete file name: ");
     scanf("%255s", filename);
     clear_input_buffer();
+
     if (access(filename, F_OK) == 0) {
         *valid = 1;
         return strdup(filename);
@@ -137,17 +147,16 @@ void create_directory_and_process_data(const char *filename) {
         return;
     }
 
-    // Increase the buffer size for filenames to accommodate the full path
+    // Create and write data for each year from 2000 to 2018
     for (int year = 2000; year <= 2018; ++year) {
-        char filename[512]; // Increased buffer size to ensure space for full file path
-        snprintf(filename, sizeof(filename), "%s/%d.txt", directory_name, year);  // Using snprintf
+        char year_filename[512]; 
+        snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
 
-        // Create and write some dummy data into each file
-        FILE *file = fopen(filename, "w");
+        FILE *file = fopen(year_filename, "w");
         if (file) {
-            fprintf(file, "Dummy data for year %d", year); // Replace with real data if needed
+            fprintf(file, "Dummy data for year %d", year);
             fclose(file);
-            printf("Created file: %s\n", filename);
+            printf("Created file: %s\n", year_filename);
         } else {
             perror("Error creating file");
         }
@@ -156,9 +165,17 @@ void create_directory_and_process_data(const char *filename) {
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
-    // Check if the file starts with "movies_" and ends with ".csv"
-    return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0) && 
-           (len >= strlen(EXTENSION) && strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
+
+    // Ensure the filename starts with "movies_" and ends with ".csv"
+    if (strncmp(filename, PREFIX, strlen(PREFIX)) != 0) {
+        return 0;
+    }
+
+    if (len < strlen(EXTENSION) || strcmp(filename + len - strlen(EXTENSION), EXTENSION) != 0) {
+        return 0;
+    }
+
+    return 1;
 }
 
 void clear_input_buffer() {
