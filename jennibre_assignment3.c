@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <time.h>
 #include <limits.h>
-#include <ctype.h>
 
 #define PREFIX "movies_"
 #define EXTENSION ".csv"
@@ -22,9 +21,6 @@ void process_file(const char *filename);
 void create_directory_and_process_data(const char *filename);
 int is_movies_file(const char *filename);
 void clear_input_buffer();
-void set_file_permissions(const char *file_path, mode_t mode);
-char* trim_whitespace(char *str);
-int is_valid_year(int year);
 
 int main() {
     int choice;
@@ -96,9 +92,10 @@ char* find_largest_or_smallest_file(int find_largest) {
     long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.') continue;
         if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
-                if ((find_largest && file_stat.st_size > selected_size) || 
+                if ((find_largest && file_stat.st_size > selected_size) ||
                     (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
                     free(selected_file);
@@ -144,18 +141,13 @@ void create_directory_and_process_data(const char *filename) {
     int random_number = rand() % 100000;
     snprintf(directory_name, sizeof(directory_name), "%s.movies.%d", ONID, random_number);
 
-    // Create directory with permissions 0755
-    if (mkdir(directory_name, 0755) == 0) {
+    if (mkdir(directory_name, 0750) == 0) {
         printf("Created directory with name %s\n", directory_name);
     } else {
         perror("Error creating directory");
         return;
     }
 
-    // Explicitly set directory permissions to 0755
-    set_file_permissions(directory_name, 0755);
-
-    // Open CSV file
     FILE *file = fopen(filename, "r");
     if (!file) {
         perror("Error opening CSV file");
@@ -166,44 +158,24 @@ void create_directory_and_process_data(const char *filename) {
     int header_skipped = 0;
 
     while (fgets(line, sizeof(line), file)) {
-        if (!header_skipped) {  // Skip header
+        if (!header_skipped) {
             header_skipped = 1;
             continue;
         }
 
         char title[MAX_TITLE_LENGTH];
-        char year_str[16];
         int year;
+        if (sscanf(line, "%255[^,],%d", title, &year) == 2) {
+            char year_filename[512];
+            snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
 
-        // Use strtok to handle cases where the title contains commas
-        char *token = strtok(line, ",");
-        if (token) {
-            strncpy(title, trim_whitespace(token), MAX_TITLE_LENGTH - 1);
-            title[MAX_TITLE_LENGTH - 1] = '\0';
-
-            token = strtok(NULL, ",");
-            if (token) {
-                strncpy(year_str, trim_whitespace(token), sizeof(year_str) - 1);
-                year_str[sizeof(year_str) - 1] = '\0';
-                year = atoi(year_str);
-
-                // Validate year
-                if (!is_valid_year(year)) continue;
-
-                char year_filename[512];
-                snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
-
-                // Append movie to the corresponding year file
-                FILE *year_file = fopen(year_filename, "a");
-                if (year_file) {
-                    fprintf(year_file, "%s\n", title);
-                    fclose(year_file);
-
-                    // Set file permissions to 0644
-                    set_file_permissions(year_filename, 0644);
-                } else {
-                    perror("Error creating file");
-                }
+            FILE *year_file = fopen(year_filename, "a");
+            if (year_file) {
+                fprintf(year_file, "%s\n", title);
+                fclose(year_file);
+                chmod(year_filename, 0640);
+            } else {
+                perror("Error creating file");
             }
         }
     }
@@ -220,32 +192,4 @@ int is_movies_file(const char *filename) {
 void clear_input_buffer() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
-}
-
-void set_file_permissions(const char *file_path, mode_t mode) {
-    if (chmod(file_path, mode) != 0) {
-        perror("Error setting file permissions");
-    }
-}
-
-char* trim_whitespace(char *str) {
-    char *end;
-
-    // Trim leading space
-    while (isspace((unsigned char)*str)) str++;
-
-    if (*str == 0) return str;  // All spaces
-
-    // Trim trailing space
-    end = str + strlen(str) - 1;
-    while (end > str && isspace((unsigned char)*end)) end--;
-
-    // Write new null terminator
-    *(end + 1) = 0;
-
-    return str;
-}
-
-int is_valid_year(int year) {
-    return (year >= 1900 && year <= 2025);  // Only allow realistic movie years
 }
