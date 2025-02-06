@@ -11,6 +11,7 @@
 #define PREFIX "movies_"
 #define EXTENSION ".csv"
 #define ONID "jennibre"
+#define MAX_TITLE_LENGTH 256
 
 void display_main_menu();
 void display_file_selection_menu();
@@ -88,15 +89,15 @@ char* find_largest_or_smallest_file(int find_largest) {
     struct dirent *entry;
     struct stat file_stat;
     char *selected_file = NULL;
-    long selected_size = find_largest ? 0 : LONG_MAX;  // Ensure correct initialization
+    long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
-        if (is_movies_file(entry->d_name)) {  
+        if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
                 if ((find_largest && file_stat.st_size > selected_size) || 
                     (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
-                    free(selected_file);  // Free previous allocation
+                    free(selected_file);
                     selected_file = strdup(entry->d_name);
                 }
             } else {
@@ -139,7 +140,6 @@ void create_directory_and_process_data(const char *filename) {
     int random_number = rand() % 100000;
     snprintf(directory_name, sizeof(directory_name), "%s.movies.%d", ONID, random_number);
 
-    // Create the directory
     if (mkdir(directory_name, 0750) == 0) {
         printf("Created directory with name %s\n", directory_name);
     } else {
@@ -147,26 +147,43 @@ void create_directory_and_process_data(const char *filename) {
         return;
     }
 
-    // Create and write data for each year from 2000 to 2018
-    for (int year = 2000; year <= 2018; ++year) {
-        char year_filename[512]; 
-        snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+    // Open CSV file
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening CSV file");
+        return;
+    }
 
-        FILE *file = fopen(year_filename, "w");
-        if (file) {
-            fprintf(file, "Dummy data for year %d", year);
-            fclose(file);
-            printf("Created file: %s\n", year_filename);
-        } else {
-            perror("Error creating file");
+    char line[512];
+    int header_skipped = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        if (!header_skipped) {  // Skip the first line (header)
+            header_skipped = 1;
+            continue;
+        }
+
+        char title[MAX_TITLE_LENGTH];
+        int year;
+        if (sscanf(line, "%255[^,],%d", title, &year) == 2) {  
+            char year_filename[512]; 
+            snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+
+            FILE *year_file = fopen(year_filename, "a");  
+            if (year_file) {
+                fprintf(year_file, "%s\n", title);
+                fclose(year_file);
+            } else {
+                perror("Error creating file");
+            }
         }
     }
+    fclose(file);
 }
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
 
-    // Ensure the filename starts with "movies_" and ends with ".csv"
     if (strncmp(filename, PREFIX, strlen(PREFIX)) != 0) {
         return 0;
     }
