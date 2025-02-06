@@ -13,7 +13,7 @@
 #define ONID "jennibre"
 #define MAX_TITLE_LENGTH 256
 #define MIN_YEAR 1900
-#define MAX_YEAR 2021
+#define MAX_YEAR 2100
 
 void display_main_menu();
 void display_file_selection_menu();
@@ -196,7 +196,12 @@ void create_directory_and_process_data(const char *filename) {
                         perror("Error creating file");
                     }
                 }
+            } else {
+                printf("Skipping movie '%s' with invalid year %d\n", title, year);
             }
+        } else {
+            // Print an error if line parsing fails
+            printf("Failed to parse line: %s\n", line);
         }
     }
     fclose(file);
