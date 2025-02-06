@@ -12,6 +12,8 @@
 #define EXTENSION ".csv"
 #define ONID "jennibre"
 #define MAX_TITLE_LENGTH 256
+#define MIN_YEAR 1900
+#define MAX_YEAR 2021
 
 void display_main_menu();
 void display_file_selection_menu();
@@ -22,6 +24,7 @@ void create_directory_and_process_data(const char *filename);
 int is_movies_file(const char *filename);
 void clear_input_buffer();
 void set_file_permissions(const char *file_path, mode_t mode);
+int is_year_processed(int year, int *years_processed);
 
 int main() {
     int choice;
@@ -162,6 +165,9 @@ void create_directory_and_process_data(const char *filename) {
     char line[512];
     int header_skipped = 0;
 
+    // Array to track processed years (from MIN_YEAR to MAX_YEAR)
+    int years_processed[MAX_YEAR - MIN_YEAR + 1] = {0}; // Initialize all to 0
+
     while (fgets(line, sizeof(line), file)) {
         if (!header_skipped) {  // Skip the first line (header)
             header_skipped = 1;
@@ -171,19 +177,25 @@ void create_directory_and_process_data(const char *filename) {
         char title[MAX_TITLE_LENGTH];
         int year;
         if (sscanf(line, "%255[^,],%d", title, &year) == 2) {  
-            char year_filename[512]; 
-            snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+            if (year >= MIN_YEAR && year <= MAX_YEAR) {
+                if (!is_year_processed(year, years_processed)) {
+                    years_processed[year - MIN_YEAR] = 1;  // Mark year as processed
 
-            // Open year file with default permissions (0644)
-            FILE *year_file = fopen(year_filename, "a");  
-            if (year_file) {
-                fprintf(year_file, "%s\n", title);
-                fclose(year_file);
-                
-                // Set file permissions to 0644 (explicitly)
-                set_file_permissions(year_filename, 0644);
-            } else {
-                perror("Error creating file");
+                    char year_filename[512]; 
+                    snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+
+                    // Open year file with default permissions (0644)
+                    FILE *year_file = fopen(year_filename, "a");  
+                    if (year_file) {
+                        fprintf(year_file, "%s\n", title);
+                        fclose(year_file);
+                        
+                        // Set file permissions to 0644 (explicitly)
+                        set_file_permissions(year_filename, 0644);
+                    } else {
+                        perror("Error creating file");
+                    }
+                }
             }
         }
     }
@@ -213,4 +225,11 @@ void set_file_permissions(const char *file_path, mode_t mode) {
     if (chmod(file_path, mode) != 0) {
         perror("Error setting file permissions");
     }
+}
+
+int is_year_processed(int year, int *years_processed) {
+    if (year >= MIN_YEAR && year <= MAX_YEAR) {
+        return years_processed[year - MIN_YEAR];
+    }
+    return 0; // Not processed
 }
