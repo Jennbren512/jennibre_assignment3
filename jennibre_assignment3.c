@@ -140,7 +140,8 @@ void create_directory_and_process_data(const char *filename) {
     int random_number = rand() % 100000;
     snprintf(directory_name, sizeof(directory_name), "%s.movies.%d", ONID, random_number);
 
-    if (mkdir(directory_name, 0750) == 0) {
+    // Create directory with permissions 0755
+    if (mkdir(directory_name, 0755) == 0) {
         printf("Created directory with name %s\n", directory_name);
     } else {
         perror("Error creating directory");
@@ -169,6 +170,7 @@ void create_directory_and_process_data(const char *filename) {
             char year_filename[512]; 
             snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
 
+            // Open year file with default permissions (0644)
             FILE *year_file = fopen(year_filename, "a");  
             if (year_file) {
                 fprintf(year_file, "%s\n", title);
