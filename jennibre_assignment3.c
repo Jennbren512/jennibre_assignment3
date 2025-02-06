@@ -87,13 +87,15 @@ char* find_largest_or_smallest_file(int find_largest) {
     char *selected_file = NULL;
     long selected_size = find_largest ? 0 : -1;
     while ((entry = readdir(dir)) != NULL) {
-        if (!is_movies_file(entry->d_name)) continue;
-        if (stat(entry->d_name, &file_stat) == 0) {
-            if ((find_largest && file_stat.st_size > selected_size) || 
-                (!find_largest && (selected_size == -1 || file_stat.st_size < selected_size))) {
-                selected_size = file_stat.st_size;
-                free(selected_file);
-                selected_file = strdup(entry->d_name);
+        if (is_movies_file(entry->d_name)) {
+            printf("Found file: %s\n", entry->d_name); // Debugging line to see files
+            if (stat(entry->d_name, &file_stat) == 0) {
+                if ((find_largest && file_stat.st_size > selected_size) || 
+                    (!find_largest && (selected_size == -1 || file_stat.st_size < selected_size))) {
+                    selected_size = file_stat.st_size;
+                    free(selected_file);
+                    selected_file = strdup(entry->d_name);
+                }
             }
         }
     }
@@ -134,8 +136,10 @@ void create_directory_and_process_data(const char *filename) {
 }
 
 int is_movies_file(const char *filename) {
+    size_t len = strlen(filename);
+    // Check if the file starts with "movies_" and ends with ".csv"
     return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0) && 
-           (strstr(filename, EXTENSION) != NULL);
+           (len >= strlen(EXTENSION) && strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
 }
 
 void clear_input_buffer() {
