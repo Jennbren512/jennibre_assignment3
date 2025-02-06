@@ -12,8 +12,6 @@
 #define EXTENSION ".csv"
 #define ONID "jennibre"
 #define MAX_TITLE_LENGTH 256
-#define MIN_YEAR 1900
-#define MAX_YEAR 2100
 
 void display_main_menu();
 void display_file_selection_menu();
@@ -24,8 +22,6 @@ void create_directory_and_process_data(const char *filename);
 int is_movies_file(const char *filename);
 void clear_input_buffer();
 void set_file_permissions(const char *file_path, mode_t mode);
-int is_year_processed(int year, int *years_processed);
-void debug_print_movies(const char *filename);
 
 int main() {
     int choice;
@@ -153,7 +149,7 @@ void create_directory_and_process_data(const char *filename) {
         return;
     }
 
-    // Explicitly set directory permissions to 0755 (just to be sure)
+    // Explicitly set directory permissions to 0755
     set_file_permissions(directory_name, 0755);
 
     // Open CSV file
@@ -166,45 +162,40 @@ void create_directory_and_process_data(const char *filename) {
     char line[512];
     int header_skipped = 0;
 
-    // Array to track processed years (from MIN_YEAR to MAX_YEAR)
-    int years_processed[MAX_YEAR - MIN_YEAR + 1] = {0}; // Initialize all to 0
-
     while (fgets(line, sizeof(line), file)) {
-        if (!header_skipped) {  // Skip the first line (header)
+        if (!header_skipped) {  // Skip header
             header_skipped = 1;
             continue;
         }
 
         char title[MAX_TITLE_LENGTH];
         int year;
-        if (sscanf(line, "%255[^,],%d", title, &year) == 2) {  
-            printf("Processing movie: '%s' in year %d\n", title, year);  // Debug print
 
-            if (year >= MIN_YEAR && year <= MAX_YEAR) {
-                if (!is_year_processed(year, years_processed)) {
-                    years_processed[year - MIN_YEAR] = 1;  // Mark year as processed
+        // Use strtok to handle cases where the title contains commas
+        char *token = strtok(line, ",");
+        if (token) {
+            strncpy(title, token, MAX_TITLE_LENGTH - 1);
+            title[MAX_TITLE_LENGTH - 1] = '\0';
 
-                    char year_filename[512]; 
-                    snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+            token = strtok(NULL, ",");
+            if (token) {
+                year = atoi(token);
 
-                    // Open year file with default permissions (0644)
-                    FILE *year_file = fopen(year_filename, "a");  
-                    if (year_file) {
-                        fprintf(year_file, "%s\n", title);
-                        fclose(year_file);
-                        
-                        // Set file permissions to 0644 (explicitly)
-                        set_file_permissions(year_filename, 0644);
-                    } else {
-                        perror("Error creating file");
-                    }
+                char year_filename[512];
+                snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+
+                // Append movie to the corresponding year file
+                FILE *year_file = fopen(year_filename, "a");
+                if (year_file) {
+                    fprintf(year_file, "%s\n", title);
+                    fclose(year_file);
+
+                    // Set file permissions to 0644
+                    set_file_permissions(year_filename, 0644);
+                } else {
+                    perror("Error creating file");
                 }
-            } else {
-                printf("Skipping movie '%s' with invalid year %d\n", title, year);
             }
-        } else {
-            // Print an error if line parsing fails
-            printf("Failed to parse line: %s\n", line);
         }
     }
     fclose(file);
@@ -212,16 +203,9 @@ void create_directory_and_process_data(const char *filename) {
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
-
-    if (strncmp(filename, PREFIX, strlen(PREFIX)) != 0) {
-        return 0;
-    }
-
-    if (len < strlen(EXTENSION) || strcmp(filename + len - strlen(EXTENSION), EXTENSION) != 0) {
-        return 0;
-    }
-
-    return 1;
+    return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
+            len > strlen(EXTENSION) &&
+            strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
 }
 
 void clear_input_buffer() {
@@ -233,11 +217,4 @@ void set_file_permissions(const char *file_path, mode_t mode) {
     if (chmod(file_path, mode) != 0) {
         perror("Error setting file permissions");
     }
-}
-
-int is_year_processed(int year, int *years_processed) {
-    if (year >= MIN_YEAR && year <= MAX_YEAR) {
-        return years_processed[year - MIN_YEAR];
-    }
-    return 0; // Not processed
 }
