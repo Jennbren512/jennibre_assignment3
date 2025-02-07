@@ -80,28 +80,25 @@ void display_file_selection_menu() {
     printf("\nEnter a choice from 1 to 3: ");
 }
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <limits.h>
-#include <errno.h>
-
-// Improved CSV file filter function
 int is_movies_file(const char *filename) {
-    const char *prefix = "movies_";
-    const char *suffix = ".csv";
+    const char *prefix = PREFIX;
+    const char *suffix = EXTENSION;
     size_t len = strlen(filename);
     size_t prefix_len = strlen(prefix);
     size_t suffix_len = strlen(suffix);
+
+    // Debug log: check file name and length
+    printf("Checking file for match: %s (length: %zu)\n", filename, len);
 
     // Check that the file starts with "movies_" and ends with ".csv"
     if (len > prefix_len + suffix_len &&
         strncmp(filename, prefix, prefix_len) == 0 &&
         strcmp(filename + len - suffix_len, suffix) == 0) {
+        printf("Matched file: %s\n", filename);
         return 1;  // Valid CSV file
     }
+
+    printf("File did not match: %s\n", filename);
     return 0;  // Invalid file
 }
 
@@ -118,9 +115,10 @@ char* find_largest_or_smallest_file(int find_largest) {
     long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.') continue;
+        if (entry->d_name[0] == '.') continue;  // Skip hidden files
 
-        printf("Checking file: %s\n", entry->d_name);  // Debug log
+        // Debug: Print each file being checked
+        printf("Checking file: %s\n", entry->d_name);
 
         if (is_movies_file(entry->d_name)) {
             printf("Valid CSV file: %s\n", entry->d_name);
@@ -152,11 +150,18 @@ char* find_largest_or_smallest_file(int find_largest) {
                 perror("Error getting file stats");
             }
         } else {
-            printf("Skipped file: %s (invalid name)\n", entry->d_name);  // Debug log
+            printf("Skipped file: %s (invalid name)\n", entry->d_name);
         }
     }
 
     closedir(dir);
+
+    // Final validation check for selected file
+    if (selected_file && !is_movies_file(selected_file)) {
+        printf("Error: Selected file does not meet naming requirements: %s\n", selected_file);
+        free(selected_file);
+        selected_file = NULL;
+    }
 
     if (!selected_file) {
         printf("No valid movies_*.csv files found.\n");
@@ -166,7 +171,6 @@ char* find_largest_or_smallest_file(int find_largest) {
 
     return selected_file;
 }
-
 
 char* get_user_file(int *valid) {
     char filename[256];
