@@ -54,8 +54,6 @@ int main() {
                     process_file(selected_file);
                     free(selected_file);
                     break;
-                } else {
-                    printf("No valid file was selected.\n");
                 }
             }
         } else if (choice == 2) {
@@ -93,26 +91,15 @@ char* find_largest_or_smallest_file(int find_largest) {
     char *selected_file = NULL;
     long selected_size = find_largest ? 0 : LONG_MAX;
 
-    printf("\nScanning directory for CSV files...\n");
-    
     while ((entry = readdir(dir)) != NULL) {
-        printf("Checking file: %s\n", entry->d_name);
-
         if (entry->d_name[0] == '.') continue;
-
         if (is_movies_file(entry->d_name)) {
-            printf("Matched CSV file: %s\n", entry->d_name);
-
             if (stat(entry->d_name, &file_stat) == 0) {
-                printf("File size: %ld bytes\n", file_stat.st_size);
-
                 if ((find_largest && file_stat.st_size > selected_size) ||
                     (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
                     free(selected_file);
                     selected_file = strdup(entry->d_name);
-                    printf("New %s file found: %s (%ld bytes)\n", 
-                           find_largest ? "largest" : "smallest", selected_file, selected_size);
                 }
             } else {
                 perror("Error getting file stats");
@@ -134,10 +121,7 @@ char* get_user_file(int *valid) {
     scanf("%255s", filename);
     clear_input_buffer();
 
-    printf("Checking if file %s exists...\n", filename);
-
     if (access(filename, F_OK) == 0) {
-        printf("File found: %s\n", filename);
         *valid = 1;
         return strdup(filename);
     } else {
@@ -148,7 +132,6 @@ char* get_user_file(int *valid) {
 }
 
 void process_file(const char *filename) {
-    printf("Processing file: %s\n", filename);
     create_directory_and_process_data(filename);
 }
 
@@ -201,12 +184,9 @@ void create_directory_and_process_data(const char *filename) {
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
-    int match = (strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
-                 len > strlen(EXTENSION) &&
-                 strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
-    
-    printf("Checking if %s is a valid movie CSV file: %s\n", filename, match ? "YES" : "NO");
-    return match;
+    return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
+            len > strlen(EXTENSION) &&
+            strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
 }
 
 void clear_input_buffer() {
