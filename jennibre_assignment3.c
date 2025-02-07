@@ -80,21 +80,29 @@ void display_file_selection_menu() {
     printf("\nEnter a choice from 1 to 3: ");
 }
 
-// Mocked check function; replace with your implementation.
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <errno.h>
+
+// Improved CSV file filter function
 int is_movies_file(const char *filename) {
-    // Check if filename starts with "movies_" and ends with ".csv"
     const char *prefix = "movies_";
     const char *suffix = ".csv";
     size_t len = strlen(filename);
     size_t prefix_len = strlen(prefix);
     size_t suffix_len = strlen(suffix);
 
+    // Check that the file starts with "movies_" and ends with ".csv"
     if (len > prefix_len + suffix_len &&
         strncmp(filename, prefix, prefix_len) == 0 &&
         strcmp(filename + len - suffix_len, suffix) == 0) {
-        return 1;
+        return 1;  // Valid CSV file
     }
-    return 0;
+    return 0;  // Invalid file
 }
 
 char* find_largest_or_smallest_file(int find_largest) {
@@ -112,8 +120,7 @@ char* find_largest_or_smallest_file(int find_largest) {
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_name[0] == '.') continue;
 
-        // Debug: Print each file being checked
-        printf("Checking file: %s\n", entry->d_name);
+        printf("Checking file: %s\n", entry->d_name);  // Debug log
 
         if (is_movies_file(entry->d_name)) {
             printf("Valid CSV file: %s\n", entry->d_name);
@@ -144,6 +151,8 @@ char* find_largest_or_smallest_file(int find_largest) {
             } else {
                 perror("Error getting file stats");
             }
+        } else {
+            printf("Skipped file: %s (invalid name)\n", entry->d_name);  // Debug log
         }
     }
 
@@ -157,6 +166,7 @@ char* find_largest_or_smallest_file(int find_largest) {
 
     return selected_file;
 }
+
 
 char* get_user_file(int *valid) {
     char filename[256];
