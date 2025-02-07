@@ -80,6 +80,23 @@ void display_file_selection_menu() {
     printf("\nEnter a choice from 1 to 3: ");
 }
 
+// Mocked check function; replace with your implementation.
+int is_movies_file(const char *filename) {
+    // Check if filename starts with "movies_" and ends with ".csv"
+    const char *prefix = "movies_";
+    const char *suffix = ".csv";
+    size_t len = strlen(filename);
+    size_t prefix_len = strlen(prefix);
+    size_t suffix_len = strlen(suffix);
+
+    if (len > prefix_len + suffix_len &&
+        strncmp(filename, prefix, prefix_len) == 0 &&
+        strcmp(filename + len - suffix_len, suffix) == 0) {
+        return 1;
+    }
+    return 0;
+}
+
 char* find_largest_or_smallest_file(int find_largest) {
     DIR *dir = opendir(".");
     if (!dir) {
@@ -95,8 +112,15 @@ char* find_largest_or_smallest_file(int find_largest) {
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_name[0] == '.') continue;
 
+        // Debug: Print each file being checked
+        printf("Checking file: %s\n", entry->d_name);
+
         if (is_movies_file(entry->d_name)) {
+            printf("Valid CSV file: %s\n", entry->d_name);
+
             if (stat(entry->d_name, &file_stat) == 0) {
+                printf("File size: %ld bytes\n", file_stat.st_size);
+
                 int should_update = 0;
                 if (find_largest && file_stat.st_size > selected_size) {
                     should_update = 1;
@@ -106,13 +130,16 @@ char* find_largest_or_smallest_file(int find_largest) {
 
                 if (should_update) {
                     selected_size = file_stat.st_size;
-                    free(selected_file);  // Free previous selection
-                    selected_file = strdup(entry->d_name);  // Duplicate new selection
+                    free(selected_file);
+                    selected_file = strdup(entry->d_name);
+
                     if (!selected_file) {
                         perror("Memory allocation error");
                         closedir(dir);
                         return NULL;
                     }
+
+                    printf("Selected file updated: %s\n", selected_file);
                 }
             } else {
                 perror("Error getting file stats");
@@ -124,6 +151,8 @@ char* find_largest_or_smallest_file(int find_largest) {
 
     if (!selected_file) {
         printf("No valid movies_*.csv files found.\n");
+    } else {
+        printf("Final selected file: %s\n", selected_file);
     }
 
     return selected_file;
@@ -194,13 +223,6 @@ void create_directory_and_process_data(const char *filename) {
         }
     }
     fclose(file);
-}
-
-int is_movies_file(const char *filename) {
-    size_t len = strlen(filename);
-    return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
-            len > strlen(EXTENSION) &&
-            strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
 }
 
 void clear_input_buffer() {
