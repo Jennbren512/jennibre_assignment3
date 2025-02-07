@@ -101,17 +101,10 @@ char* find_largest_or_smallest_file(int find_largest) {
                     free(selected_file);
                     selected_file = strdup(entry->d_name);
                 }
-                if ((find_largest && file_stat.st_size < selected_size) ||
-                    (!find_largest && file_stat.st_size > selected_size)) {
-                    selected_size = file_stat.st_size;
-                    free(selected_file);
-                    selected_file = strdup(entry->d_name);
-                }
-                else {
+            } else {
                 perror("Error getting file stats");
             }
         }
-    }
     }
     closedir(dir);
 
