@@ -79,12 +79,6 @@ void display_file_selection_menu() {
     printf("\nEnter a choice from 1 to 3: ");
 }
 
-// Function to check if a file has a .csv extension
-int is_movies_file(const char *filename) {
-    const char *ext = strrchr(filename, '.'); 
-    return (ext && strcmp(ext, ".csv") == 0);
-}
-
 char* find_largest_or_smallest_file(int find_largest) {
     DIR *dir = opendir(".");
     if (!dir) {
@@ -95,27 +89,29 @@ char* find_largest_or_smallest_file(int find_largest) {
     struct dirent *entry;
     struct stat file_stat;
     char *selected_file = NULL;
-    long selected_size = find_largest ? -1 : LONG_MAX;  // Proper initialization
+    long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_name[0] == '.') continue;  // Skip hidden files
-
-        if (is_movies_file(entry->d_name)) {  // Ensure only CSV files are considered
+        if (entry->d_name[0] == '.') continue;
+        if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
-                printf("Checking file: %s, Size: %ld bytes\n", entry->d_name, file_stat.st_size);
-
                 if ((find_largest && file_stat.st_size > selected_size) ||
                     (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
-                    
-                    free(selected_file);  // Prevent memory leaks
+                    free(selected_file);
                     selected_file = strdup(entry->d_name);
-                    printf("New selected file: %s\n", selected_file);
                 }
-            } else {
+                if ((find_largest && file_stat.st_size < selected_size) ||
+                    (!find_largest && file_stat.st_size > selected_size)) {
+                    selected_size = file_stat.st_size;
+                    free(selected_file);
+                    selected_file = strdup(entry->d_name);
+                }
+                else {
                 perror("Error getting file stats");
             }
         }
+    }
     }
     closedir(dir);
 
@@ -191,6 +187,13 @@ void create_directory_and_process_data(const char *filename) {
         }
     }
     fclose(file);
+}
+
+int is_movies_file(const char *filename) {
+    size_t len = strlen(filename);
+    return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
+            len > strlen(EXTENSION) &&
+            strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
 }
 
 void clear_input_buffer() {
