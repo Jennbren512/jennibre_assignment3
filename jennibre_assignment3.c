@@ -106,6 +106,7 @@ char* find_largest_or_smallest_file(int find_largest) {
     long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
+        printf("Checking file: %s\n", entry->d_name);
         if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
                 if ((find_largest && file_stat.st_size > selected_size) || 
@@ -192,6 +193,8 @@ void create_directory_and_process_data(const char *filename) {
                 if (year_file) {
                     fprintf(year_file, "%s\n", title);
                     fclose(year_file);
+                    chmod(year_filename, 0640);
+                    printf("Processing year: %d, writing to %s\n", year, year_filename);
                 } else {
                     perror("Error creating file");
                 }
