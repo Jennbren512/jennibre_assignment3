@@ -89,7 +89,7 @@ char* find_largest_or_smallest_file(int find_largest) {
     struct dirent *entry;
     struct stat file_stat;
     char *selected_file = NULL;
-    long selected_size = find_largest ? 0 : LONG_MAX;
+    long selected_size = find_largest ? -1 : LONG_MAX;  // Fix initialization
 
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_name[0] == '.') continue;
@@ -98,7 +98,8 @@ char* find_largest_or_smallest_file(int find_largest) {
                 if ((find_largest && file_stat.st_size > selected_size) ||
                     (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
-                    free(selected_file);
+                    
+                    free(selected_file);  // Free before assigning new value
                     selected_file = strdup(entry->d_name);
                 }
             } else {
