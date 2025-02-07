@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <limits.h>
+#include <errno.h>
 
 #define PREFIX "movies_"
 #define EXTENSION ".csv"
@@ -93,19 +94,32 @@ char* find_largest_or_smallest_file(int find_largest) {
 
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_name[0] == '.') continue;
+
         if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
-                if ((find_largest && file_stat.st_size > selected_size) ||
-                    (!find_largest && file_stat.st_size < selected_size)) {
+                int should_update = 0;
+                if (find_largest && file_stat.st_size > selected_size) {
+                    should_update = 1;
+                } else if (!find_largest && file_stat.st_size < selected_size) {
+                    should_update = 1;
+                }
+
+                if (should_update) {
                     selected_size = file_stat.st_size;
-                    free(selected_file);
-                    selected_file = strdup(entry->d_name);
+                    free(selected_file);  // Free previous selection
+                    selected_file = strdup(entry->d_name);  // Duplicate new selection
+                    if (!selected_file) {
+                        perror("Memory allocation error");
+                        closedir(dir);
+                        return NULL;
+                    }
                 }
             } else {
                 perror("Error getting file stats");
             }
         }
     }
+
     closedir(dir);
 
     if (!selected_file) {
