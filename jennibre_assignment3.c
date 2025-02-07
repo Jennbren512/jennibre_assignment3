@@ -7,14 +7,11 @@
 #include <unistd.h>
 #include <time.h>
 #include <limits.h>
-#include <ctype.h>
 
 #define PREFIX "movies_"
 #define EXTENSION ".csv"
 #define ONID "jennibre"
 #define MAX_TITLE_LENGTH 256
-#define MIN_YEAR 1900
-#define MAX_YEAR 2025
 
 void display_main_menu();
 void display_file_selection_menu();
@@ -24,30 +21,19 @@ void process_file(const char *filename);
 void create_directory_and_process_data(const char *filename);
 int is_movies_file(const char *filename);
 void clear_input_buffer();
-char* trim_whitespace(char *str);
 
 int main() {
     int choice;
     while (1) {
         display_main_menu();
-        if (scanf("%d", &choice) != 1) {
-            clear_input_buffer();
-            printf("Invalid input. Try again.\n");
-            continue;
-        }
+        scanf("%d", &choice);
         clear_input_buffer();
-
         if (choice == 1) {
             int file_choice;
             while (1) {
                 display_file_selection_menu();
-                if (scanf("%d", &file_choice) != 1) {
-                    clear_input_buffer();
-                    printf("Invalid input. Try again.\n");
-                    continue;
-                }
+                scanf("%d", &file_choice);
                 clear_input_buffer();
-
                 char *selected_file = NULL;
                 int valid = 1;
 
@@ -106,9 +92,10 @@ char* find_largest_or_smallest_file(int find_largest) {
     long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.') continue;
         if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
-                if ((find_largest && file_stat.st_size > selected_size) || 
+                if ((find_largest && file_stat.st_size > selected_size) ||
                     (!find_largest && file_stat.st_size < selected_size)) {
                     selected_size = file_stat.st_size;
                     free(selected_file);
@@ -131,18 +118,14 @@ char* find_largest_or_smallest_file(int find_largest) {
 char* get_user_file(int *valid) {
     char filename[256];
     printf("Enter the complete file name: ");
-    if (scanf("%255s", filename) != 1) {
-        clear_input_buffer();
-        *valid = 0;
-        return NULL;
-    }
+    scanf("%255s", filename);
     clear_input_buffer();
 
-    if (is_movies_file(filename) && access(filename, F_OK) == 0) {
+    if (access(filename, F_OK) == 0) {
         *valid = 1;
         return strdup(filename);
     } else {
-        printf("The file %s was not found or is invalid. Try again\n", filename);
+        printf("The file %s was not found. Try again\n", filename);
         *valid = 0;
         return NULL;
     }
@@ -171,34 +154,28 @@ void create_directory_and_process_data(const char *filename) {
         return;
     }
 
-    char line[1024];
-    fgets(line, sizeof(line), file); // Skip header
+    char line[512];
+    int header_skipped = 0;
 
     while (fgets(line, sizeof(line), file)) {
+        if (!header_skipped) {
+            header_skipped = 1;
+            continue;
+        }
+
         char title[MAX_TITLE_LENGTH];
         int year;
+        if (sscanf(line, "%255[^,],%d", title, &year) == 2) {
+            char year_filename[512];
+            snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
 
-        char *token = strtok(line, ",");
-        if (token) {
-            strncpy(title, token, MAX_TITLE_LENGTH);
-            token = strtok(NULL, ",");
-            if (token) {
-                year = atoi(token);
-
-                if (year >= MIN_YEAR && year <= MAX_YEAR) {
-                    trim_whitespace(title);
-                    char year_filename[512];
-                    snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
-
-                    FILE *year_file = fopen(year_filename, "a");
-                    if (year_file) {
-                        chmod(year_filename, 0640);
-                        fprintf(year_file, "%s\n", title);
-                        fclose(year_file);
-                    } else {
-                        perror("Error creating file");
-                    }
-                }
+            FILE *year_file = fopen(year_filename, "a");
+            if (year_file) {
+                fprintf(year_file, "%s\n", title);
+                fclose(year_file);
+                chmod(year_filename, 0640);
+            } else {
+                perror("Error creating file");
             }
         }
     }
@@ -207,22 +184,12 @@ void create_directory_and_process_data(const char *filename) {
 
 int is_movies_file(const char *filename) {
     size_t len = strlen(filename);
-    return strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
-           len >= strlen(EXTENSION) &&
-           strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0;
+    return (strncmp(filename, PREFIX, strlen(PREFIX)) == 0 &&
+            len > strlen(EXTENSION) &&
+            strcmp(filename + len - strlen(EXTENSION), EXTENSION) == 0);
 }
 
 void clear_input_buffer() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
-}
-
-char* trim_whitespace(char *str) {
-    char *end;
-    while (isspace((unsigned char)*str)) str++;
-    if (*str == 0) return str;
-    end = str + strlen(str) - 1;
-    while (end > str && isspace((unsigned char)*end)) end--;
-    *(end + 1) = '\0';
-    return str;
 }
