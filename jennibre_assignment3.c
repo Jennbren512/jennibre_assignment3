@@ -171,30 +171,33 @@ void create_directory_and_process_data(const char *filename) {
         return;
     }
 
-    char line[512];
-    int header_skipped = 0;
+    char line[1024];
+    fgets(line, sizeof(line), file); // Skip header
 
     while (fgets(line, sizeof(line), file)) {
-        if (!header_skipped) {
-            header_skipped = 1;
-            continue;
-        }
-
         char title[MAX_TITLE_LENGTH];
         int year;
-        if (sscanf(line, " %255[^,],%d", title, &year) == 2) {
-            if (year >= MIN_YEAR && year <= MAX_YEAR) {
-                trim_whitespace(title);
-                char year_filename[512];
-                snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
 
-                FILE *year_file = fopen(year_filename, "a");
-                if (year_file) {
-                    chmod(year_filename, 0640);
-                    fprintf(year_file, "%s\n", title);
-                    fclose(year_file);
-                } else {
-                    perror("Error creating file");
+        char *token = strtok(line, ",");
+        if (token) {
+            strncpy(title, token, MAX_TITLE_LENGTH);
+            token = strtok(NULL, ",");
+            if (token) {
+                year = atoi(token);
+
+                if (year >= MIN_YEAR && year <= MAX_YEAR) {
+                    trim_whitespace(title);
+                    char year_filename[512];
+                    snprintf(year_filename, sizeof(year_filename), "%s/%d.txt", directory_name, year);
+
+                    FILE *year_file = fopen(year_filename, "a");
+                    if (year_file) {
+                        chmod(year_filename, 0640);
+                        fprintf(year_file, "%s\n", title);
+                        fclose(year_file);
+                    } else {
+                        perror("Error creating file");
+                    }
                 }
             }
         }
