@@ -138,11 +138,11 @@ char* get_user_file(int *valid) {
     }
     clear_input_buffer();
 
-    if (access(filename, F_OK) == 0 && is_movies_file(filename)) {
+    if (is_movies_file(filename) && access(filename, F_OK) == 0) {
         *valid = 1;
         return strdup(filename);
     } else {
-        printf("The file %s was not found or is not a valid movies_*.csv file. Try again\n", filename);
+        printf("The file %s was not found or is invalid. Try again\n", filename);
         *valid = 0;
         return NULL;
     }
@@ -190,6 +190,7 @@ void create_directory_and_process_data(const char *filename) {
 
                 FILE *year_file = fopen(year_filename, "a");
                 if (year_file) {
+                    chmod(year_filename, 0640);
                     fprintf(year_file, "%s\n", title);
                     fclose(year_file);
                 } else {
