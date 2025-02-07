@@ -106,7 +106,6 @@ char* find_largest_or_smallest_file(int find_largest) {
     long selected_size = find_largest ? 0 : LONG_MAX;
 
     while ((entry = readdir(dir)) != NULL) {
-        printf("Checking file: %s\n", entry->d_name);
         if (is_movies_file(entry->d_name)) {
             if (stat(entry->d_name, &file_stat) == 0) {
                 if ((find_largest && file_stat.st_size > selected_size) || 
@@ -139,11 +138,11 @@ char* get_user_file(int *valid) {
     }
     clear_input_buffer();
 
-    if (access(filename, F_OK) == 0) {
+    if (access(filename, F_OK) == 0 && is_movies_file(filename)) {
         *valid = 1;
         return strdup(filename);
     } else {
-        printf("The file %s was not found. Try again\n", filename);
+        printf("The file %s was not found or is not a valid movies_*.csv file. Try again\n", filename);
         *valid = 0;
         return NULL;
     }
@@ -193,8 +192,6 @@ void create_directory_and_process_data(const char *filename) {
                 if (year_file) {
                     fprintf(year_file, "%s\n", title);
                     fclose(year_file);
-                    chmod(year_filename, 0640);
-                    printf("Processing year: %d, writing to %s\n", year, year_filename);
                 } else {
                     perror("Error creating file");
                 }
